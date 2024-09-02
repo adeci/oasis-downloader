@@ -80,13 +80,17 @@ class SFTPClientApp:
         self.file_tree.configure(yscroll=self.scrollbar.set)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+        self.progress_status_label = tk.Label(
+            root, text="IDLE", fg="black")
+        self.progress_status_label.grid(row=9, column=0, columnspan=3, pady=5)
+
         self.progress_bar = Progressbar(
             root, orient=tk.HORIZONTAL, length=300, mode='determinate')
-        self.progress_bar.grid(row=9, column=0, columnspan=3, pady=10)
+        self.progress_bar.grid(row=10, column=0, columnspan=3, pady=10)
 
         self.download_button = tk.Button(
             root, text="Download Selected File", command=self.download_selected_file)
-        self.download_button.grid(row=10, column=1, pady=10)
+        self.download_button.grid(row=11, column=1, pady=10)
         self.download_button.config(state=tk.DISABLED)
 
     def browse_file(self, entry):
@@ -157,7 +161,6 @@ class SFTPClientApp:
         self.root.after(100, self.root.update_idletasks)
 
     def populate_file_tree(self, path):
-        # Clear current tree view
         self.file_tree.delete(*self.file_tree.get_children())
 
         try:
@@ -223,40 +226,61 @@ class SFTPClientApp:
             if not local_path:
                 return
 
+            self.download_button.config(state=tk.DISABLED)
             threading.Thread(target=self.download_file_thread,
                              args=(remote_path, local_path)).start()
 
+    def download_file_thread(self, remote_path, local_path):
+        try:
+            self.progress_bar['value'] = 0
+            self.progress_bar["maximum"] = 100
+            self.progress_status_label.config(text="DOWNLOADING", fg="green")
+            self.root.update_idletasks()
 
-def download_file_thread(self, remote_path, local_path):
-    try:
-        self.progress_bar['value'] = 0
-        self.root.update_idletasks()
+            file_size = self.sftp.stat(remote_path).st_size
 
-        file_size = self.sftp.stat(remote_path).st_size
+            self.progress_thread = threading.Thread(
+                target=self.update_progress_bar, args=(local_path, file_size), daemon=True)
+            self.progress_thread.start()
 
-        with open(local_path, 'wb') as f:
-            bytes_transferred = 0
+            with open(local_path, 'wb') as local_file:
+                self.sftp.getfo(remote_path, local_file)
 
-            def file_writer_callback(data, _):
-                nonlocal bytes_transferred
+            messagebox.showinfo(
+                "Success", f"File downloaded successfully to {local_path}")
+            self.progress_status_label.config(text="IDLE", fg="black")
 
-                if isinstance(data, bytes):
-                    f.write(data)
-                    bytes_transferred += len(data)
-                    progress_percentage = (bytes_transferred / file_size) * 100
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to download file: {e}")
+            self.progress_status_label.config(text="IDLE", fg="black")
+        finally:
+            self.progress_bar['value'] = 0
+            self.download_button.config(state=tk.NORMAL)
+
+    def update_progress_bar(self, local_path, file_size):
+        while True:
+            try:
+
+                if os.path.exists(local_path):
+                    current_size = os.path.getsize(local_path)
+
+                    progress_percentage = (current_size / file_size) * 100
+
                     self.progress_bar['value'] = progress_percentage
-                    self.root.after(
-                        10, self.root.update_idletasks)
+                    self.root.update_idletasks()
 
-            self.sftp.getfo(remote_path, f, callback=file_writer_callback)
 
-        messagebox.showinfo(
-            "Success", f"File downloaded successfully to {local_path}")
-        self.progress_bar['value'] = 0
+                    if current_size >= file_size:
+                        break
+                else:
+                    self.progress_bar['value'] = 0
+                    self.root.update_idletasks()
 
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to download file: {e}")
-        self.progress_bar['value'] = 0
+                time.sleep(0.1)
+
+            except Exception as e:
+                print(f"Error updating progress bar: {e}")
+                break
 
     def __del__(self):
         if self.sftp:
