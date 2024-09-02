@@ -26,7 +26,7 @@ Download the latest release .exe from releases compiled using pyInstaller.
 
     ```bash
     git clone https://github.com/adeci/oasis-downloader.git
-    cd oasis-sftp-client
+    cd oasis-downloader
     ```
 2. **Create and source Python virtual environment**:
     ```bash
