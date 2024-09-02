@@ -226,29 +226,37 @@ class SFTPClientApp:
             threading.Thread(target=self.download_file_thread,
                              args=(remote_path, local_path)).start()
 
-    def download_file_thread(self, remote_path, local_path):
-        try:
-            self.progress_bar['value'] = 0
-            self.root.update_idletasks()
 
-            file_size = self.sftp.stat(remote_path).st_size
-            with open(local_path, 'wb') as f:
-                def file_writer_callback(data, _):
-                    if isinstance(data, bytes):
-                        f.write(data)
-                        self.progress_bar['value'] += len(data) / \
-                            file_size * 100
-                        self.root.after(10, self.root.update_idletasks)
+def download_file_thread(self, remote_path, local_path):
+    try:
+        self.progress_bar['value'] = 0
+        self.root.update_idletasks()
 
-                self.sftp.getfo(remote_path, f, callback=file_writer_callback)
+        file_size = self.sftp.stat(remote_path).st_size
 
-            messagebox.showinfo(
-                "Success", f"File downloaded successfully to {local_path}")
-            self.progress_bar['value'] = 0
+        with open(local_path, 'wb') as f:
+            bytes_transferred = 0
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to download file: {e}")
-            self.progress_bar['value'] = 0
+            def file_writer_callback(data, _):
+                nonlocal bytes_transferred
+
+                if isinstance(data, bytes):
+                    f.write(data)
+                    bytes_transferred += len(data)
+                    progress_percentage = (bytes_transferred / file_size) * 100
+                    self.progress_bar['value'] = progress_percentage
+                    self.root.after(
+                        10, self.root.update_idletasks)
+
+            self.sftp.getfo(remote_path, f, callback=file_writer_callback)
+
+        messagebox.showinfo(
+            "Success", f"File downloaded successfully to {local_path}")
+        self.progress_bar['value'] = 0
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to download file: {e}")
+        self.progress_bar['value'] = 0
 
     def __del__(self):
         if self.sftp:
