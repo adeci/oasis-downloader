@@ -11,6 +11,7 @@ class SFTPClientApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Oasis")
+        self.root.iconbitmap('oasis.ico')
 
         self.sftp = None
         self.ssh = None
