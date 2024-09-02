@@ -45,6 +45,6 @@ Download the latest release .exe from releases compiled using pyInstaller.
 
 5. **Optionally you can create an executable with pyinstaller**:
     ```bash
-    pyinstaller --onefile --windowed --icon=oasis.ico oasis.py
+    pyinstaller --onefile --windowed --icon=oasis.ico --add-data "oasis.ico;." oasis.py
     ```
     The executable will be in the dist folder.

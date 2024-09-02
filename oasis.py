@@ -5,13 +5,21 @@ from tkinter import filedialog, messagebox, ttk
 from tkinter.ttk import Progressbar
 import threading
 import time
+import os
+import sys
+
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 class SFTPClientApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Oasis")
-        self.root.iconbitmap('oasis.ico')
+        self.root.iconbitmap(resource_path('oasis.ico'))
 
         self.sftp = None
         self.ssh = None
